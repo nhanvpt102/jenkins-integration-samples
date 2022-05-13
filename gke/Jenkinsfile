@@ -13,7 +13,7 @@ pipeline {
         APP_JAR = "${APP_NAME}.jar"
 
         JENKINSAGENT = "jenkinsagent"
-        JENKINSAGENT_IMAGE = "gcr.io/${PROJECT_ID}/${JENKINSAGENT}:${BUILD_ID}"
+        JENKINSAGENT_IMAGE = "gcr.io/${PROJECT_ID}/${JENKINSAGENT}:latest"
         JENKINSAGENT_JAR = "${JENKINSAGENT}.jar"
     }
 
