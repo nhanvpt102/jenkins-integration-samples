@@ -25,12 +25,12 @@ spec:
     - /busybox/cat
     tty: true
     volumeMounts:
-      - name: kaniko-secret
-        mountPath: /secret
+      - name: svc-devops-stg
+        mountPath: /mnt/secret
     env:
       - name: GOOGLE_APPLICATION_CREDENTIALS
-        value: /secret/kaniko-secret.json
+        value: /mnt/secret/svc-devops-stg-keyfile.json
   volumes:
-  - name: kaniko-secret
+  - name: svc-devops-stg
     secret:
-      secretName: kaniko-secret
+      secretName: svc-devops-stg

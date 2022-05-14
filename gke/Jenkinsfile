@@ -62,9 +62,6 @@ pipeline {
                     sh '''#!/busybox/sh
                     /kaniko/executor -f `pwd`/gke/Dockerfile -c `pwd` --context="gs://${BUILD_CONTEXT_BUCKET}/${BUILD_CONTEXT}" --destination="${GCR_IMAGE}" --build-arg JAR_FILE="${APP_JAR}"
                     '''
-                    sh '''#!/busybox/sh
-                    /kaniko/executor -f `pwd`/jenkinsagent/Dockerfile -c `pwd` --destination="${JENKINSAGENT_IMAGE}"
-                    '''
                 }
             }
         }
