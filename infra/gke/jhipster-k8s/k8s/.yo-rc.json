@@ -1,0 +1,18 @@
+{
+  "generator-jhipster": {
+    "appsFolders": ["gateway"],
+    "clusteredDbApps": {},
+    "directoryPath": "../",
+    "dockerPushCommand": "docker push",
+    "dockerRepositoryName": "gcr.io",
+    "ingressDomain": "",
+    "istio": false,
+    "jwtSecretKey": "MzA0OGEyMzlhNzQ3NGU5YTMxZDg1YjJhYzg5ZWVkNGU1OWUxMTMwMmRhMzYxNTM5NDFkMjU2NmYxMzc3NGRkMTAwZjQzMDlhMjBlNTg4ZmMxZGI2YzA3OWU2ZjM3ZmFiMzI1MQ==",
+    "kubernetesNamespace": "infra",
+    "kubernetesServiceType": "LoadBalancer",
+    "kubernetesStorageClassName": "",
+    "kubernetesUseDynamicStorage": true,
+    "monitoring": "no",
+    "serviceDiscoveryType": "eureka"
+  }
+}

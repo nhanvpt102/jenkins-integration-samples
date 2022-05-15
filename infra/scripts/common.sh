@@ -30,7 +30,7 @@ fi
 
 function gcloud_auth_login(){
   ## Configure gcloud to target the configured project.
-  gloud auth login
+  gcloud auth login
   gcloud config set project $GOOGLE_CLOUD_PROJECT
 
   kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-admin --user=$(gcloud config get-value account)
@@ -97,9 +97,12 @@ function create_sa(){
     local service_account=$1
     echo "create_sa '$service_account'"
 
-    gcloud iam service-accounts list
-
-    gcloud iam service-accounts create $service_account
+    SA_EMAIL=$(gcloud iam service-accounts list --filter="name:$service_account" --format='value(email)')
+    if [[ -z "$SA_EMAIL" ]]; then
+      gcloud iam service-accounts create $service_account
+    else
+      echo "exited: $SA_EMAIL"
+    fi
 }
 
 function gke_cluster_rbac_permissions(){
@@ -125,10 +128,9 @@ function config_sa_roles(){
     local service_account=$1
 
     echo "config_serviceaccount_permissions for '$service_account'"
-
     SA_EMAIL=${service_account}@${GOOGLE_CLOUD_PROJECT}.iam.gserviceaccount.com
 
-    local roles="container.admin container.developer storage.admin storage.objectAdmin containeranalysis.admin owner"
+    local roles="container.admin container.developer storage.admin storage.objectAdmin containeranalysis.admin compute.instanceAdmin compute.networkAdmin iam.serviceAccountUser"
     for role in $roles; do
       echo "  add 'role/$role'"
       gcloud projects add-iam-policy-binding ${GOOGLE_CLOUD_PROJECT} \
@@ -153,20 +155,48 @@ function create_sa_kubernetes_secret(){
     kubectl create secret generic "$service_account" --from-file "${service_account_file}"
 }
 
+function port_forward(){
+  gcloud container clusters get-credentials $GKE_CLUSTER_NAME --zone $GKE_ZONE --project ${GOOGLE_CLOUD_PROJECT}
+
+  # export POD_NAME=$(kubectl get pods -o jsonpath="{.items[0].metadata.name}") && kubectl port-forward $POD_NAME 8081:8080 >> /dev/null &
+}
+
 function cleaning_up(){
     local service_account=$1
     local service_account_file=$2
 
-   #kubectl delete -f my-app.yaml
-   #kubectl delete secret my-app-sa-key
-   gsutils iam ch -d serviceAccount:${service_account}@${GOOGLE_CLOUD_PROJECT}.iam.gserviceaccount.com:objectAdmin gs://${GCS_BUCKET_NAME}/
-   gcloud iam service-accounts delete "${service_account}@${GOOGLE_CLOUD_PROJECT}.iam.gserviceaccount.com"
-   rm "${service_account_file}"
-   gsutil rm -r gs://${GCS_BUCKET_NAME}/
+    # Delete the Project
+    gcloud projects delete $GOOGLE_CLOUD_PROJECT
+
+    # service_account
+    gsutils iam ch -d serviceAccount:${service_account}@${GOOGLE_CLOUD_PROJECT}.iam.gserviceaccount.com:objectAdmin gs://${GCS_BUCKET_NAME}/
+    gcloud iam service-accounts delete "${service_account}@${GOOGLE_CLOUD_PROJECT}.iam.gserviceaccount.com"
+
+    # Kubernetes Cluster
+    gcloud container clusters delete $GKE_CLUSTER_NAME --zone $GKE_ZONE
+
+    # Storage Buckets
+    gsutil rm -r gs://${GCS_BUCKET_NAME}
+
+    # Google Container Registry Images
+    list_samples_digest=$(gcloud container images list-tags gcr.io/${GOOGLE_CLOUD_PROJECT}/jenkins-integration-samples-gke --format="value(digest)")
+    for digest in $list_samples_digest; do
+      gcloud container images delete gcr.io/${GOOGLE_CLOUD_PROJECT}/jenkins-integration-samples-gke@sha256:$digest
+    done
+}
+
+function create_firewall(){
+    gcloud compute --project=$GOOGLE_CLOUD_PROJECT firewall-rules create instance-$GKE_CLUSTER_NAME \
+    --direction=INGRESS \
+    --priority=1000 \
+    --network=default \
+    --action=ALLOW \
+    --rules=tcp:8080 \
+    --source-ranges=0.0.0.0/0 \
+    --target-tags=http-server,https-server
 }
 
 #create_gke_deployer
-
 #create_sa $SA_DEVOPS_NAME
 #gke_cluster_rbac_permissions $SA_DEVOPS_NAME
 
@@ -174,3 +204,5 @@ function cleaning_up(){
 #config_sa_roles $SA_DEVOPS_NAME
 #config_sa_bucket_permissions $SA_DEVOPS_NAME
 #create_sa_kubernetes_secret $SA_DEVOPS_NAME $SA_DEVOPS_SECRET_FILE
+#create_firewall
+port_forward
