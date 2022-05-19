@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ninjamart-fe-uat
+  namespace: uat
+  labels:
+    app: ninjamart-fe-uat
+spec:
+  ports:
+  - name: http
+    port: 3000
+  selector:
+    app: ninjamart-fe-uat
+
+---
+
+apiVersion: extensions/v1
+kind: Deployment
+metadata:
+  name: ninjamart-fe-uat
+  namespace: uat
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: ninjamart-fe-uat
+        version: v1
+    spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+        agentpool: linuxworker
+      tolerations:
+      - key: "kubernetes.azure.com/scalesetpriority"
+        operator: "Equal"
+        value: "spot"
+        effect: "NoSchedule"
+      imagePullSecrets:
+      - name: <imagePullSecretName>
+      containers:
+      - image: gcr.io/eternal-empire-349717/ninjamart-fe:latest
+        resources:
+          requests:
+            memory: "256Mi"
+          limits:
+            memory: "384Mi"
+        imagePullPolicy: IfNotPresent
+        name: ninjamart-fe
+        ports:
+        - containerPort: 3000

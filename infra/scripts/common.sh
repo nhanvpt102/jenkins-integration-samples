@@ -36,6 +36,10 @@ function gcloud_auth_login(){
   kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-admin --user=$(gcloud config get-value account)
 }
 
+function docker_login(){
+  gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://gcr.io
+}
+
 function enable_apis(){
     gcloud services enable compute.googleapis.com \
     container.googleapis.com \
@@ -43,6 +47,8 @@ function enable_apis(){
     servicemanagement.googleapis.com \
     cloudresourcemanager.googleapis.com \
     --project ${GOOGLE_CLOUD_PROJECT}
+
+    gcloud services enable container.googleapis.com containerregistry.googleapis.com --project ${GOOGLE_CLOUD_PROJECT}
 }
 
 function create_GCS_bucket(){
@@ -57,13 +63,15 @@ function install_jenkins_plugins(){
 
 function create_kubernetes_cluster(){
     gcloud container clusters create $GKE_CLUSTER_NAME \
-     --num-nodes $GKE_NUM_NODES \
-     --zone $GKE_ZONE \
-     --machine-type $GKE_MACHINE_TYPE \
-     --scopes "https://www.googleapis.com/auth/source.read_write,cloud-platform" \
-     --cluster-version latest \
-     --spot \
-     --cluster-ipv4-cidr $GKE_CLUSTER_IPV4_CIDR
+    --num-nodes $GKE_NUM_NODES \
+    --zone $GKE_ZONE \
+    --machine-type $GKE_MACHINE_TYPE \
+    --scopes "https://www.googleapis.com/auth/source.read_write,cloud-platform" \
+    --cluster-version latest \
+    --enable-autorepair \
+    --enable-autoupgrade \
+    --spot \
+    --cluster-ipv4-cidr $GKE_CLUSTER_IPV4_CIDR
 
     gcloud container clusters list
 }
@@ -156,9 +164,14 @@ function create_sa_kubernetes_secret(){
 }
 
 function port_forward(){
-  gcloud container clusters get-credentials $GKE_CLUSTER_NAME --zone $GKE_ZONE --project ${GOOGLE_CLOUD_PROJECT}
+    gcloud container clusters get-credentials $GKE_CLUSTER_NAME --zone $GKE_ZONE --project ${GOOGLE_CLOUD_PROJECT}
+    POD_NAME=$(kubectl get pods -o jsonpath="{.items[0].metadata.name}")
+    kubectl port-forward $POD_NAME 8081:8080 >> /dev/null &
+}
 
-  # export POD_NAME=$(kubectl get pods -o jsonpath="{.items[0].metadata.name}") && kubectl port-forward $POD_NAME 8081:8080 >> /dev/null &
+function gke_cluster_config_services(){
+    local service_name=$1
+    cat k8s/services/$service_name.yaml|kubectl apply -f -
 }
 
 function cleaning_up(){
@@ -196,6 +209,75 @@ function create_firewall(){
     --target-tags=http-server,https-server
 }
 
+
+function install_jhipster(){
+    if [[ ! -d "java-microservices-examples/jhipster-k8s/gateway" ]]; then
+      echo "clone java-microservices-examples.git"
+      git clone https://github.com/oktadeveloper/java-microservices-examples.git
+    fi
+    pushd java-microservices-examples/reactive-jhipster
+
+    npm i -g generator-jhipster@7
+
+    mkdir k8s
+    cd k8s
+    jhipster k8s
+    
+    #To generate the missing Docker image(s), please run:
+    cd /home/nhanvo/GCP/java-microservices-examples/jhipster-k8s/gateway
+    ./gradlew bootJar -Pprod jibDockerBuild
+
+
+    GOOGLE_CLOUD_PROJECT=eternal-empire-349717
+    # You will need to push your image to a registry. If you have not done so, use the following commands to tag and push the images:
+    docker image tag gateway gcr.io/$GOOGLE_CLOUD_PROJECT/gateway
+    docker push gcr.io/$GOOGLE_CLOUD_PROJECT/gateway
+
+    #you can use Jib to build and push image directly to a remote registry:
+    ./gradlew bootJar -Pprod jib -Djib.to.image=gcr.io/$GOOGLE_CLOUD_PROJECT/gateway
+
+    #You can deploy all your apps by running the following kubectl command:
+    bash kubectl-apply.sh -f
+
+    #If you want to use kustomize configuration, then run the following command:
+    #bash kubectl-apply.sh -k
+
+    #Use these commands to find your application's IP addresses:
+    #kubectl get svc gateway -n infra
+    
+    popd
+}
+
+function build_api_gateway(){
+    pushd java-microservices-examples/jhipster-k8s/gateway
+        echo "  Build jhipster-k8s/gateway"
+        ./gradlew bootJar -Pprod jibDockerBuild
+
+        #echo "  push gcr.io/$GOOGLE_CLOUD_PROJECT/gateway"
+        #docker image tag gateway gcr.io/$GOOGLE_CLOUD_PROJECT/gateway
+        #docker push gcr.io/$GOOGLE_CLOUD_PROJECT/gateway
+
+        echo "  use Jib to build and push image directly to a remote registry"
+        ./gradlew bootJar -Pprod jib -Djib.to.image=gcr.io/$GOOGLE_CLOUD_PROJECT/gateway
+
+    popd
+}
+
+function build_docker_image(){
+    local folder=$1
+    local docker_image=$2
+
+
+    pushd "$folder"
+        echo "  Build $docker_image"
+        docker build . -f .dockerfile -t gcr.io/$GOOGLE_CLOUD_PROJECT/$docker_image
+        #docker image tag $docker_image gcr.io/$GOOGLE_CLOUD_PROJECT/$docker_image
+        docker push gcr.io/$GOOGLE_CLOUD_PROJECT/$docker_image
+    popd
+}
+
+#get_kubernetes_cluster_credentials
+
 #create_gke_deployer
 #create_sa $SA_DEVOPS_NAME
 #gke_cluster_rbac_permissions $SA_DEVOPS_NAME
@@ -205,4 +287,9 @@ function create_firewall(){
 #config_sa_bucket_permissions $SA_DEVOPS_NAME
 #create_sa_kubernetes_secret $SA_DEVOPS_NAME $SA_DEVOPS_SECRET_FILE
 #create_firewall
-port_forward
+#port_forward
+#gke_cluster_config_services frontend
+
+#uild_api_gateway
+
+build_docker_image "/home/nhanvo/sdb1/GCP/repo/NJV/ninjamart-fe" "ninjamart-fe"
