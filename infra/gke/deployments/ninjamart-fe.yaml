@@ -6,6 +6,7 @@ metadata:
   labels:
     app: ninjamart-fe-uat
 spec:
+  type: LoadBalancer
   ports:
   - name: http
     port: 3000
@@ -13,38 +14,35 @@ spec:
     app: ninjamart-fe-uat
 
 ---
-
-apiVersion: extensions/v1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: ninjamart-fe-uat
   namespace: uat
+  labels:
+    app: ninjamart-fe-uat
 spec:
-  replicas: 1
+  selector:
+    matchLabels:
+      app: ninjamart-fe-uat
+      tier: web
   template:
     metadata:
       labels:
         app: ninjamart-fe-uat
-        version: v1
+        tier: web
     spec:
-      nodeSelector:
-        kubernetes.io/os: linux
-        agentpool: linuxworker
       tolerations:
       - key: "kubernetes.azure.com/scalesetpriority"
         operator: "Equal"
         value: "spot"
         effect: "NoSchedule"
       imagePullSecrets:
-      - name: <imagePullSecretName>
+      - name: svc-devops-stg
       containers:
-      - image: gcr.io/eternal-empire-349717/ninjamart-fe:latest
-        resources:
-          requests:
-            memory: "256Mi"
-          limits:
-            memory: "384Mi"
+      - name: ninjamart-fe-uat
+        image: gcr.io/eternal-empire-349717/ninjamart-fe:latest
         imagePullPolicy: IfNotPresent
-        name: ninjamart-fe
         ports:
         - containerPort: 3000
+

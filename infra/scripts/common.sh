@@ -10,7 +10,7 @@ ENV_NAME="STG"
 
 ## The name of the GCP SA to be used during installation.
 SA_DEVOPS_NAME="svc-devops-${ENV_NAME,,}"
-SA_DEVOPS_SECRET_FILE="${SA_DEVOPS_NAME}-keyfile.json"
+SA_DEVOPS_SECRET_FILE="/tmp/${SA_DEVOPS_NAME}-keyfile.json"
 
 ## Storage
 #GCS_BUCKET_NAME="${GOOGLE_CLOUD_PROJECT,,}-${APP_NAME,,}-bucket"
@@ -279,6 +279,18 @@ function build_docker_image(){
     popd
 }
 
+function get_docker_register(){
+    local service_account=$1
+	local service_account_file=$2
+		
+    SA_EMAIL=${service_account}@${GOOGLE_CLOUD_PROJECT}.iam.gserviceaccount.com
+	gcloud auth activate-service-account $SA_EMAIL --key-file="${service_account_file}"
+	gcloud auth configure-docker
+	#~/.docker/config.json
+}
+
+#kubectl_authentication_plugin_installation
+#docker_login
 #get_kubernetes_cluster_credentials
 
 #create_gke_deployer
@@ -295,4 +307,6 @@ function build_docker_image(){
 
 #uild_api_gateway
 
-build_docker_image "/home/nhanvo/sdb1/GCP/repo/NJV/ninjamart-fe" "ninjamart-fe"
+#build_docker_image "/home/nhanvo/sdb1/GCP/repo/NJV/ninjamart-fe" "ninjamart-fe"
+
+get_docker_register $SA_DEVOPS_NAME $SA_DEVOPS_SECRET_FILE
