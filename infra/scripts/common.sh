@@ -267,10 +267,13 @@ function build_docker_image(){
     local folder=$1
     local docker_image=$2
 
+    echo "  Copy ./docker-images/ninjamart-fe/Dockerfile . $folder/"
+    cp ../docker-images/ninjamart-fe/Dockerfile $folder -f
 
     pushd "$folder"
+
         echo "  Build $docker_image"
-        docker build . -f .dockerfile -t gcr.io/$GOOGLE_CLOUD_PROJECT/$docker_image
+        docker build . -f Dockerfile -t gcr.io/$GOOGLE_CLOUD_PROJECT/$docker_image
         #docker image tag $docker_image gcr.io/$GOOGLE_CLOUD_PROJECT/$docker_image
         docker push gcr.io/$GOOGLE_CLOUD_PROJECT/$docker_image
     popd
