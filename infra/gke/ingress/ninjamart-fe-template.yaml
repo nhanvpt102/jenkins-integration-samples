@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: %SERVICE_NAME%-%NAMESPACE_NAME%-ingress
+  namespace: %NAMESPACE_NAME%
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: %ADDRESS_NAME%
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.allow-http: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  tls:
+  - secretName: ninjamart-fe
+  rules:
+  - http:
+      paths:
+      - path: /*
+        pathType: Prefix
+        backend:
+          service:
+            name: %SERVICE_NAME%-%NAMESPACE_NAME%
+            port:
+              number: 3000

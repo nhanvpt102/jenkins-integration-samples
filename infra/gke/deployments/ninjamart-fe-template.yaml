@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: %SERVICE_NAME%-%NAMESPACE_NAME%
+  namespace: %NAMESPACE_NAME%
+  labels:
+    app: %SERVICE_NAME%-%NAMESPACE_NAME%
+spec:
+  selector:
+    matchLabels:
+      app: %SERVICE_NAME%-%NAMESPACE_NAME%
+  template:
+    metadata:
+      labels:
+        app: %SERVICE_NAME%-%NAMESPACE_NAME%
+    spec:
+      tolerations:
+      - key: "kubernetes.azure.com/scalesetpriority"
+        operator: "Equal"
+        value: "spot"
+        effect: "NoSchedule"
+      imagePullSecrets:
+      - name: svc-devops-stg
+      containers:
+      - name: %SERVICE_NAME%-%NAMESPACE_NAME%
+        image: gcr.io/eternal-empire-349717/%SERVICE_NAME%:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: %SERVICE_PORT%
+        resources:
+          requests:
+            cpu: 200m

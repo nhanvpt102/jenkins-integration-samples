@@ -6,10 +6,12 @@ metadata:
   labels:
     app: ninjamart-fe-uat
 spec:
+  loadBalancerIP: 130.211.207.93
   type: LoadBalancer
   ports:
   - name: http
-    port: 3000
+    port: 80
+    targetPort: 3000
   selector:
     app: ninjamart-fe-uat
 

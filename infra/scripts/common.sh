@@ -4,6 +4,8 @@ set -e
 ## The ID of the GCP project to be installed into.
 GOOGLE_CLOUD_PROJECT="eternal-empire-349717"
 APP_NAME="Samples"
+DOMAIN_NAME="ninja-uat.tk"
+ADDRESS_NAME="ninjamart-fe-pub-ip"
 
 ## Environment
 ENV_NAME="STG"
@@ -289,6 +291,104 @@ function get_docker_register(){
 	#~/.docker/config.json
 }
 
+function create_addresses(){
+    local address_name=$1
+		
+    gcloud compute addresses create $address_name --global
+	  gcloud compute addresses describe $address_name --global
+}
+
+function create_managed_certificate(){
+    local domain_name=$1
+	
+    local template_file="../gke/cert/managed-cert-template.yaml"
+	  local managed_cert_file="/tmp/managed-cert.yaml"
+	
+	  sed "s/%DOMAIN_NAME1%/${domain_name}/g" $template_file > $managed_cert_file
+	  cat $managed_cert_file
+	  kubectl apply -f $managed_cert_file
+  
+  
+  gcloud compute ssl-certificates create "managed-cert" \
+    --description="managed-cert" \
+    --domains="ninja-uat.tk" \
+    --global
+    
+    gcloud compute ssl-certificates describe "managed-cert" \
+   --global \
+   --format="get(name,managed.status, managed.domainStatus)"
+   
+   gcloud compute target-https-proxies update TARGET_PROXY_NAME \
+    --ssl-certificates SSL_CERTIFICATE_LIST \
+    --global-ssl-certificates \
+    --global
+}
+
+function apply_kubectl_service(){
+  local service_name=$1
+	local namespace_name=$2
+	
+  local template_file="../gke/services/${service_name}-template.yaml"
+	local service_file="/tmp/${service_name}-service.yaml"
+	
+	sed "s/%SERVICE_NAME%/${service_name}/g" $template_file > $service_file
+	sed "s/%NAMESPACE_NAME%/${namespace_name}/g" -i $service_file
+	cat $service_file
+	kubectl apply -f $service_file
+}
+
+function apply_kubectl_ingress(){
+  local service_name=$1
+	local namespace_name=$2
+	local address_name=$3
+  local domain_name=$4
+    
+  local template_file="../gke/ingress/${service_name}-template.yaml"
+	local service_file="/tmp/${service_name}-ingress.yaml"
+	
+	sed "s/%SERVICE_NAME%/${service_name}/g" $template_file > $service_file
+	sed "s/%NAMESPACE_NAME%/${namespace_name}/g" -i $service_file
+	sed "s/%ADDRESS_NAME%/${address_name}/g" -i $service_file
+  sed "s/%DOMAIN_NAME%/${domain_name}/g" -i $service_file
+	cat $service_file
+	kubectl apply -f $service_file
+	
+	#kubectl describe managedcertificate managed-cert
+	# may wait for 60 min
+}
+
+function check_ingress(){
+  local domain_name=$1
+  
+	# may wait for 60 min
+  gcloud compute ssl-certificates list
+	kubectl describe managedcertificate managed-cert
+  curl -v https://${domain_name}
+}
+
+function create_cert(){
+  local cert_name=$1
+  local domain_name=$2
+      
+    openssl genrsa -out $cert_name.key 2048
+    openssl req -new -key $cert_name.key -out $cert_name.csr -subj "/CN=${domain_name}"
+    
+    openssl x509 -req -days 365 -in $cert_name.csr -signkey $cert_name.key -out $cert_name.crt
+}
+function create_cert_secret(){
+  local cert_name=$1
+  local namespace_name=$2
+  
+    kubectl create secret tls $cert_name \
+      --cert $cert_name.crt \
+      --key $cert_name.key \
+      -n $namespace_name
+    
+    gcloud compute ssl-certificates create $cert_name \
+      --certificate $cert_name.crt \
+      --private-key $cert_name.key
+}
+
 #kubectl_authentication_plugin_installation
 #docker_login
 #get_kubernetes_cluster_credentials
@@ -309,4 +409,19 @@ function get_docker_register(){
 
 #build_docker_image "/home/nhanvo/sdb1/GCP/repo/NJV/ninjamart-fe" "ninjamart-fe"
 
-get_docker_register $SA_DEVOPS_NAME $SA_DEVOPS_SECRET_FILE
+#get_docker_register $SA_DEVOPS_NAME $SA_DEVOPS_SECRET_FILE
+
+#create_addresses $ADDRESS_NAME
+
+#create_managed_certificate "${DOMAIN_NAME}"
+
+
+#echo -n 'admin' | base64
+#echo -n 'admin123' | base64
+
+#apply_kubectl_service "ninjamart-fe" "uat"
+#apply_kubectl_ingress "ninjamart-fe" "uat" "$ADDRESS_NAME" "${DOMAIN_NAME}"
+
+# create_cert "ninjamart-fe" "${DOMAIN_NAME}"
+# create_cert_secret "ninjamart-fe" "uat"
+check_ingress "34.102.149.137" 
