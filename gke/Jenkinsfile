@@ -9,7 +9,7 @@ pipeline {
         PROD_CLUSTER = "${JENK_INT_IT_PROD}"
         BUILD_CONTEXT_BUCKET = "${JENK_INT_IT_BUCKET}"
         BUILD_CONTEXT = "build-context-${BUILD_ID}.tar.gz"
-        APP_NAME = "jenkins-integration-samples-gke"
+        APP_NAME = "ninjamartorder"
         GCR_IMAGE = "gcr.io/${PROJECT_ID}/${APP_NAME}:${BUILD_ID}"
         APP_JAR = "${APP_NAME}.jar"
 
@@ -22,7 +22,7 @@ pipeline {
     }
 
     stages {
-        stage("Build FE") {
+        stage("Build ninjamartorder") {
             agent {
                 kubernetes {
                   cloud 'kubernetes'
@@ -37,7 +37,16 @@ pipeline {
                 }
                 container('mvnw') {
                   sh "chmod +x mvnw"
-                  sh "./mvnw -Pprod package -Dmaven.test.skip jib:dockerBuild"
+                  sh "./mvnw -Pprod package -Dmaven.test.skip"
+                  sh "ls -la target"
+
+                // bundle the generated artifact    
+                  sh "cp target/${APP_NAME}-*.jar $APP_JAR"
+
+                // archive the build context for kaniko
+                  sh "tar --exclude='./.git' -zcvf /tmp/$BUILD_CONTEXT ."
+                  sh "mv /tmp/$BUILD_CONTEXT ."
+                  step([$class: 'ClassicUploadStep', credentialsId: env.JENK_INT_IT_CRED_ID, bucket: "gs://${BUILD_CONTEXT_BUCKET}", pattern: env.BUILD_CONTEXT])
                }
             }
         }
@@ -63,7 +72,7 @@ pipeline {
                       // run tests
                         sh "mvn verify"
 
-                      // bundle the generated artifact    
+                      // bundle the generated artifact
                         sh "cp target/${APP_NAME}-*.jar $APP_JAR"
 
                       // archive the build context for kaniko
@@ -88,18 +97,14 @@ pipeline {
             }
             steps {
                 script {
-                    log.info 'Starting'
-                    checkout([$class: 'GitSCM', branches: [[name: '*/$BUILD_BRANCH']], extensions: [[$class: 'CleanBeforeCheckout', deleteUntrackedNestedRepositories: true]], userRemoteConfigs: [[credentialsId: "github-ssh-key", url: "git@github.com:nhanvpt102/jenkins-integration-samples.git"]]])
+                    log.info 'Publish Image for branch: ${BUILD_BRANCH}'
+                    checkout([$class: 'GitSCM', branches: [[name: "*/${BUILD_BRANCH}"]], extensions: [[$class: 'CleanBeforeCheckout', deleteUntrackedNestedRepositories: true]], userRemoteConfigs: [[credentialsId: "github-ssh-key", url: "git@github.com:nhanvpt102/jenkins-integration-samples.git"]]])
                 }
                 container(name: 'kaniko', shell: '/busybox/sh') {
                     sh '''#!/busybox/sh
                     /kaniko/executor -f `pwd`/gke/Dockerfile -c `pwd` --context="gs://${BUILD_CONTEXT_BUCKET}/${BUILD_CONTEXT}" --destination="${GCR_IMAGE}" --build-arg JAR_FILE="${APP_JAR}"
                     '''
                 }
-               script { 
-                    log.info 'Starting Publish'
-                    log.error 'Nothing to do!'
-               }
             }
         }
         stage("Deploy to staging") {
