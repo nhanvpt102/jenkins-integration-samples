@@ -84,7 +84,7 @@ pipeline {
             }
         }
 
-        stage("Publish Image ${APP_NAME}") {
+        stage("Publish Image ${env.APP_NAME}") {
             agent {
                 kubernetes {
                     cloud 'kubernetes'
@@ -97,13 +97,13 @@ pipeline {
             }
             steps {
                 script {
-                    log.info 'Publish Image for branch: ${BUILD_BRANCH}'
-                    writeFile([file:"${env.workspace}/Dockerfile}",text:libraryResource('gke/jenkins/mvnw-Dockerfile')])
+                    log.info 'Publish Image for branch: ${env.BUILD_BRANCH}'
+                    writeFile([file:"${env.workspace}/Dockerfile",text:libraryResource('gke/jenkins/mvnw-Dockerfile')])
                     sh "ls -la ${env.workspace}"
                 }
                 container(name: 'kaniko', shell: '/busybox/sh') {
                     sh '''#!/busybox/sh
-                    /kaniko/executor -f ${env.workspace}/Dockerfile -c `pwd` --context="gs://${BUILD_CONTEXT_BUCKET}/${BUILD_CONTEXT}" --destination="${GCR_IMAGE}" --build-arg JAR_FILE="${APP_JAR}"
+                    /kaniko/executor -f `pwd`/Dockerfile -c `pwd` --context="gs://${BUILD_CONTEXT_BUCKET}/${BUILD_CONTEXT}" --destination="${GCR_IMAGE}" --build-arg JAR_FILE="${APP_JAR}"
                     '''
                 }
             }
@@ -117,13 +117,12 @@ pipeline {
                 }
             }
             steps {
-                script {
-                    log.info 'Starting'
-                    checkout([$class: 'GitSCM', branches: [[name: '*/$BUILD_BRANCH']], extensions: [[$class: 'CleanBeforeCheckout', deleteUntrackedNestedRepositories: true]], userRemoteConfigs: [[credentialsId: "github-ssh-key", url: "git@github.com:nhanvpt102/jenkins-integration-samples.git"]]])
-                }
                 container('gke-deploy') {
-                    sh "sed -i s#IMAGE#${GCR_IMAGE}#g gke/kubernetes/manifest.yaml"
-                          step([$class: 'KubernetesEngineBuilder', projectId: env.PROJECT_ID, clusterName: env.STAGING_CLUSTER, location: env.PROJECT_ZONE, manifestPattern: 'gke/kubernetes/manifest.yaml', credentialsId: env.JENK_INT_IT_CRED_ID, verifyDeployments: true])
+                    log.info 'Deploy to staging'
+                    writeFile([file:"${env.workspace}/manifest.yaml",text:libraryResource('gke/jenkins/mvnw-manifest.yaml')])
+                    sh "ls -la ${env.workspace}"
+                    sh "sed -i s#IMAGE#${GCR_IMAGE}#g manifest.yaml"
+                          step([$class: 'KubernetesEngineBuilder', projectId: env.PROJECT_ID, clusterName: env.STAGING_CLUSTER, location: env.PROJECT_ZONE, manifestPattern: 'manifest.yaml', credentialsId: env.JENK_INT_IT_CRED_ID, verifyDeployments: true])
                 }
             }
 
