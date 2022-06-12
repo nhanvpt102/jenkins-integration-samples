@@ -70,7 +70,7 @@ pipeline {
                 }
                script { 
                     log.info 'Starting Publish'
-                    log.warning 'Nothing to do!'
+                    log.error 'Nothing to do!'
                }
             }
         }
