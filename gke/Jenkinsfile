@@ -80,23 +80,18 @@ pipeline {
                           step([$class: 'KubernetesEngineBuilder', projectId: env.PROJECT_ID, clusterName: env.STAGING_CLUSTER, location: env.PROJECT_ZONE, manifestPattern: 'gke/kubernetes/manifest.yaml', credentialsId: env.JENK_INT_IT_CRED_ID, verifyDeployments: true])
                 }
             }
-<<<<<<< HEAD
+
         }
       /**
        * This stage simulates an SRE manual approval process. Should you want to incorporate
        * this into your pipeline you can uncomment this stage.
         stage ('Wait for SRE Approval') {
-=======
-	}
-        stage('Wait for SRE Approval') {
->>>>>>> d20ac6ea115fa12c9ec5106a22766b3ef50e3d2e
             steps{
                 timeout(time:12, unit:'HOURS') {
                     input message:'Approve deployment?'
                 }
             }
         }
-<<<<<<< HEAD
       **/
       stage("Deploy to prod") {
         agent {
@@ -113,22 +108,5 @@ pipeline {
           }
         }
       }
-=======
-	stage("Deploy to prod") {
-            agent {
-    	        kubernetes {
-      		    cloud 'kubernetes'
-      		    label 'gke-deploy'
-		    yamlFile 'gke/jenkins/gke-deploy-pod.yaml'
-		}
-            }
-	    steps{
-		container('gke-deploy') {
-		    sh "sed -i s#IMAGE#${GCR_IMAGE}#g gke/kubernetes/manifest.yaml"
-                    step([$class: 'KubernetesEngineBuilder', projectId: env.PROJECT_ID, clusterName: env.PROD_CLUSTER, location: env.PROJECT_ZONE, manifestPattern: 'gke/kubernetes/manifest.yaml', credentialsId: env.JENK_INT_IT_CRED_ID, verifyDeployments: true])
-		}
-            }
-	}
->>>>>>> d20ac6ea115fa12c9ec5106a22766b3ef50e3d2e
     }
 }
