@@ -16,9 +16,32 @@ pipeline {
         JENKINSAGENT = "jenkinsagent"
         JENKINSAGENT_IMAGE = "gcr.io/${PROJECT_ID}/${JENKINSAGENT}:latest"
         JENKINSAGENT_JAR = "${JENKINSAGENT}.jar"
+
+        TARGET_GIT_URL="ssh://git@178.32.238.19:7999/njv/ninjamart-order.git"
+        TARGET_GIT_CREDENTIALSID="github-ssh-key"
     }
 
     stages {
+        stage("Build FE") {
+            agent {
+                kubernetes {
+                  cloud 'kubernetes'
+                  label 'maven-pod'
+                  yaml libraryResource('gke/jenkins/maven-pod.yaml')
+                }
+            }
+            steps {
+                script {
+                    log.info "Checkout branch: $BUILD_BRANCH"
+                    checkout([$class: 'GitSCM', branches: [[name: '*/$BUILD_BRANCH']], extensions: [[$class: 'CleanBeforeCheckout', deleteUntrackedNestedRepositories: true]], userRemoteConfigs: [[credentialsId: "${TARGET_GIT_CREDENTIALSID}", url: "${TARGET_GIT_URL}"]]])
+                }
+                container('maven') {
+                  sh "chmod +x mvnw"
+                  sh "./mvnw -Pprod package -Dmaven.test.skip jib:dockerBuild"
+               }
+            }
+        }
+
         stage("Build and test") {
             agent {
                 kubernetes {
@@ -29,8 +52,8 @@ pipeline {
             }
             steps {
                 script {
-                    log.info 'Starting'
-                    checkout([$class: 'GitSCM', branches: [[name: '*/devops-world-eu']], extensions: [[$class: 'CleanBeforeCheckout', deleteUntrackedNestedRepositories: true]], userRemoteConfigs: [[credentialsId: 'github-ssh-key', url: 'git@github.com:nhanvpt102/jenkins-integration-samples.git']]])
+                    log.info "Checkout branch: $BUILD_BRANCH"
+                    checkout([$class: 'GitSCM', branches: [[name: '*/$BUILD_BRANCH']], extensions: [[$class: 'CleanBeforeCheckout', deleteUntrackedNestedRepositories: true]], userRemoteConfigs: [[credentialsId: "github-ssh-key", url: "git@github.com:nhanvpt102/jenkins-integration-samples.git"]]])
                 }
                 container('maven') {
                     dir("gke") {
@@ -66,7 +89,7 @@ pipeline {
             steps {
                 script {
                     log.info 'Starting'
-                    checkout([$class: 'GitSCM', branches: [[name: '*/devops-world-eu']], extensions: [[$class: 'CleanBeforeCheckout', deleteUntrackedNestedRepositories: true]], userRemoteConfigs: [[credentialsId: 'github-ssh-key', url: 'git@github.com:nhanvpt102/jenkins-integration-samples.git']]])
+                    checkout([$class: 'GitSCM', branches: [[name: '*/$BUILD_BRANCH']], extensions: [[$class: 'CleanBeforeCheckout', deleteUntrackedNestedRepositories: true]], userRemoteConfigs: [[credentialsId: "github-ssh-key", url: "git@github.com:nhanvpt102/jenkins-integration-samples.git"]]])
                 }
                 container(name: 'kaniko', shell: '/busybox/sh') {
                     sh '''#!/busybox/sh
@@ -90,7 +113,7 @@ pipeline {
             steps {
                 script {
                     log.info 'Starting'
-                    checkout([$class: 'GitSCM', branches: [[name: '*/devops-world-eu']], extensions: [[$class: 'CleanBeforeCheckout', deleteUntrackedNestedRepositories: true]], userRemoteConfigs: [[credentialsId: 'github-ssh-key', url: 'git@github.com:nhanvpt102/jenkins-integration-samples.git']]])
+                    checkout([$class: 'GitSCM', branches: [[name: '*/$BUILD_BRANCH']], extensions: [[$class: 'CleanBeforeCheckout', deleteUntrackedNestedRepositories: true]], userRemoteConfigs: [[credentialsId: "github-ssh-key", url: "git@github.com:nhanvpt102/jenkins-integration-samples.git"]]])
                 }
                 container('gke-deploy') {
                     sh "sed -i s#IMAGE#${GCR_IMAGE}#g gke/kubernetes/manifest.yaml"
@@ -121,7 +144,7 @@ pipeline {
         steps{
             script {
                 log.info 'Starting'
-                checkout([$class: 'GitSCM', branches: [[name: '*/devops-world-eu']], extensions: [[$class: 'CleanBeforeCheckout', deleteUntrackedNestedRepositories: true]], userRemoteConfigs: [[credentialsId: 'github-ssh-key', url: 'git@github.com:nhanvpt102/jenkins-integration-samples.git']]])
+                checkout([$class: 'GitSCM', branches: [[name: '*/$BUILD_BRANCH']], extensions: [[$class: 'CleanBeforeCheckout', deleteUntrackedNestedRepositories: true]], userRemoteConfigs: [[credentialsId: "github-ssh-key", url: "git@github.com:nhanvpt102/jenkins-integration-samples.git"]]])
             }
             container('gke-deploy') {
               sh "sed -i s#IMAGE#${GCR_IMAGE}#g gke/kubernetes/manifest.yaml"

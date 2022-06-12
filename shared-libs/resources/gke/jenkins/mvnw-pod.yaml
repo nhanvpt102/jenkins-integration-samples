@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: mvnw
+    image: openjdk:8-jdk-alpine
+    command: ['cat']
+    tty: true
