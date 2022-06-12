@@ -68,6 +68,10 @@ pipeline {
                     /kaniko/executor -f `pwd`/gke/Dockerfile -c `pwd` --context="gs://${BUILD_CONTEXT_BUCKET}/${BUILD_CONTEXT}" --destination="${GCR_IMAGE}" --build-arg JAR_FILE="${APP_JAR}"
                     '''
                 }
+               script { 
+                    log.info 'Starting Publish'
+                    log.warning 'Nothing to do!'
+               }
             }
         }
         stage("Deploy to staging") {
