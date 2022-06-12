@@ -31,7 +31,7 @@ pipeline {
                 script {
                     log.info 'Starting'
                     log.warning 'Nothing to do!'
-                    git branch: 'develop', credentialsId: 'github-ssh-key', url: 'git@github.com:nhanvpt102/jenkins-integration-samples.git'
+                    git branch: 'devops-world-eu', credentialsId: 'github-ssh-key', url: 'git@github.com:nhanvpt102/jenkins-integration-samples.git'
                 }
                 container('maven') {
                     dir("gke") {
