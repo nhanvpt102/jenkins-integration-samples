@@ -20,6 +20,13 @@ pipeline {
 
     stages {
         stage('scm') {
+            agent {
+                kubernetes {
+                  cloud 'kubernetes'
+                  label 'maven-pod'
+                  yamlFile 'gke/jenkins/maven-pod.yaml'
+                }
+            }
             steps {
                  dir("$WORKSPACE/jenkins-integration-samples") {
                      git branch: 'devops-world-eu', credentialsId: 'github-ssh-key', url: 'git@github.com:nhanvpt102/jenkins-integration-samples.git'
