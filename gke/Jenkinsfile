@@ -51,6 +51,7 @@ pipeline {
                }
             }
         }
+
         stage("Publish Image") {
             agent {
                 kubernetes {
