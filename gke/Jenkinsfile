@@ -1,3 +1,5 @@
+@Library('shared-libs') _
+
 pipeline {
     agent none
     environment {
