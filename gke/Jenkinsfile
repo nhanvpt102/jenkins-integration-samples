@@ -21,6 +21,14 @@ pipeline {
     }
 
     stages {
+        def scmVars = checkout([
+               $class : 'GitSCM',
+               branches : [[name: '*/devops-world-eu']],
+               doGenerateSubmoduleConfigurations: false,
+               extensions : [/*[$class: 'CleanBeforeCheckout']*/],
+               submoduleCfg : [],
+               userRemoteConfigs: [[credentialsId: 'github-ssh-key', url: 'git@github.com:nhanvpt102/jenkins-integration-samples.git']]
+        ])
         stage("Build and test") {
             agent {
                 kubernetes {
