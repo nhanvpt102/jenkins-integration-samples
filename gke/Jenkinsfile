@@ -19,6 +19,19 @@ pipeline {
     }
 
     stages {
+        stage('Init') {
+            steps {
+                echo 'Initializing..'
+                echo "Running ${env.BUILD_ID} on ${env.JENKINS_URL}"
+            }
+        }
+        stage('scm') {
+            steps {
+                 dir("$WORKSPACE/jenkins-integration-samples") {
+                     git branch: 'devops-world-eu', credentialsId: 'github-ssh-key', url: 'git@github.com:nhanvpt102/jenkins-integration-samples.git'
+                 }
+            }
+        }
         stage('scm') {
             agent {
                 kubernetes {
