@@ -112,14 +112,16 @@ pipeline {
             agent {
                 kubernetes {
                   cloud 'kubernetes'
-                  label 'gke-deploy'
+                  inheritFrom 'gke-deploy'
                   yaml libraryResource('gke/jenkins/gke-deploy-pod.yaml')
                 }
             }
             steps {
-                container('gke-deploy') {
+                script {
                     log.info 'Deploy to staging'
                     writeFile([file:"${env.workspace}/manifest.yaml",text:libraryResource('gke/jenkins/mvnw-manifest.yaml')])
+                }
+                container('gke-deploy') {
                     sh "ls -la ${env.workspace}"
                     sh "sed -i s#IMAGE#${GCR_IMAGE}#g manifest.yaml"
                           step([$class: 'KubernetesEngineBuilder', projectId: env.PROJECT_ID, clusterName: env.STAGING_CLUSTER, location: env.PROJECT_ZONE, manifestPattern: 'manifest.yaml', credentialsId: env.JENK_INT_IT_CRED_ID, verifyDeployments: true])
@@ -142,7 +144,7 @@ pipeline {
         agent {
           kubernetes {
             cloud 'kubernetes'
-            label 'gke-deploy'
+            inheritFrom 'gke-deploy'
             yaml libraryResource('gke/jenkins/gke-deploy-pod.yaml')
           }
         }

@@ -20,7 +20,7 @@ spec:
   selector:
     matchLabels:
       app: jenkins-integration-samples-gke
-  replicas: 2
+  replicas: 1
   template:
     metadata:
       labels:
