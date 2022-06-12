@@ -3,6 +3,6 @@ kind: Pod
 spec:
   containers:
   - name: mvnw
-    image: openjdk:8-jdk-alpine
+    image: openjdk:14-jdk-alpine
     command: ['cat']
     tty: true
