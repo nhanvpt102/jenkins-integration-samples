@@ -25,7 +25,6 @@ pipeline {
                 echo "Running ${env.BUILD_ID} on ${env.JENKINS_URL}"
             }
         }
-
         stage("Build and test") {
             agent {
                 kubernetes {
