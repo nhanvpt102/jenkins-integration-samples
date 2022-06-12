@@ -26,8 +26,8 @@ pipeline {
             agent {
                 kubernetes {
                   cloud 'kubernetes'
-                  label 'maven-pod'
-                  yaml libraryResource('gke/jenkins/maven-pod.yaml')
+                  label 'mvnw-pod'
+                  yaml libraryResource('gke/jenkins/mvnw-pod.yaml')
                 }
             }
             steps {
@@ -35,7 +35,7 @@ pipeline {
                     log.info "Checkout branch: $BUILD_BRANCH"
                     checkout([$class: 'GitSCM', branches: [[name: '*/$BUILD_BRANCH']], extensions: [[$class: 'CleanBeforeCheckout', deleteUntrackedNestedRepositories: true]], userRemoteConfigs: [[credentialsId: "${TARGET_GIT_CREDENTIALSID}", url: "${TARGET_GIT_URL}"]]])
                 }
-                container('maven') {
+                container('mvnw') {
                   sh "chmod +x mvnw"
                   sh "./mvnw -Pprod package -Dmaven.test.skip jib:dockerBuild"
                }
