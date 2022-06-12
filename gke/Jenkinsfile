@@ -28,9 +28,11 @@ pipeline {
                 }
             }
             steps {
-                container('maven') {
+                step: {
                     log.info 'Starting'
                     log.warning 'Nothing to do!'
+                }
+                container('maven') {
                     dir("gke") {
                       // build
                         sh "mvn clean package"
