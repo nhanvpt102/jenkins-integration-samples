@@ -45,6 +45,10 @@ pipeline {
                         step([$class: 'ClassicUploadStep', credentialsId: env.JENK_INT_IT_CRED_ID, bucket: "gs://${BUILD_CONTEXT_BUCKET}", pattern: env.BUILD_CONTEXT])
                    }
                }
+               script { 
+                    log.info 'Starting'
+                    log.warning 'Nothing to do!'
+               }
             }
         }
         stage("Publish Image") {
