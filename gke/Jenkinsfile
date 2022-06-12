@@ -21,7 +21,6 @@ pipeline {
     }
 
     stages {
-
         stage("Build and test") {
             agent {
                 kubernetes {
