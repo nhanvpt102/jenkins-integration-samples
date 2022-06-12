@@ -22,17 +22,17 @@ pipeline {
     }
 
     stages {
-        stage("Build ninjamartorder") {
+        stage("Build ${APP_NAME}") {
             agent {
                 kubernetes {
                   cloud 'kubernetes'
-                  label 'mvnw-pod'
+                  inheritFrom 'mvnw-pod'
                   yaml libraryResource('gke/jenkins/mvnw-pod.yaml')
                 }
             }
             steps {
                 script {
-                    log.info "Checkout branch: $BUILD_BRANCH"
+                    log.info "Checkout branch: ${BUILD_BRANCH}"
                     checkout([$class: 'GitSCM', branches: [[name: '*/$BUILD_BRANCH']], extensions: [[$class: 'CleanBeforeCheckout', deleteUntrackedNestedRepositories: true]], userRemoteConfigs: [[credentialsId: "${TARGET_GIT_CREDENTIALSID}", url: "${TARGET_GIT_URL}"]]])
                 }
                 container('mvnw') {
@@ -55,13 +55,13 @@ pipeline {
             agent {
                 kubernetes {
                   cloud 'kubernetes'
-                  label 'maven-pod'
+                  inheritFrom 'maven-pod'
                   yaml libraryResource('gke/jenkins/maven-pod.yaml')
                 }
             }
             steps {
                 script {
-                    log.info "Checkout branch: $BUILD_BRANCH"
+                    log.info "Checkout branch: ${BUILD_BRANCH}"
                     checkout([$class: 'GitSCM', branches: [[name: '*/$BUILD_BRANCH']], extensions: [[$class: 'CleanBeforeCheckout', deleteUntrackedNestedRepositories: true]], userRemoteConfigs: [[credentialsId: "github-ssh-key", url: "git@github.com:nhanvpt102/jenkins-integration-samples.git"]]])
                 }
                 container('maven') {
@@ -84,11 +84,11 @@ pipeline {
             }
         }
 
-        stage("Publish Image") {
+        stage("Publish Image ${APP_NAME}") {
             agent {
                 kubernetes {
                     cloud 'kubernetes'
-                    label 'kaniko-pod'
+                    inheritFrom 'kaniko-pod'
                     yaml libraryResource('gke/jenkins/kaniko-pod.yaml')
                 }
             }
@@ -98,11 +98,12 @@ pipeline {
             steps {
                 script {
                     log.info 'Publish Image for branch: ${BUILD_BRANCH}'
-                    checkout([$class: 'GitSCM', branches: [[name: "*/${BUILD_BRANCH}"]], extensions: [[$class: 'CleanBeforeCheckout', deleteUntrackedNestedRepositories: true]], userRemoteConfigs: [[credentialsId: "github-ssh-key", url: "git@github.com:nhanvpt102/jenkins-integration-samples.git"]]])
+                    writeFile([file:"${env.workspace}/Dockerfile}",text:libraryResource('gke/jenkins/mvnw-Dockerfile')])
+                    sh "ls -la ${env.workspace}"
                 }
                 container(name: 'kaniko', shell: '/busybox/sh') {
                     sh '''#!/busybox/sh
-                    /kaniko/executor -f `pwd`/gke/Dockerfile -c `pwd` --context="gs://${BUILD_CONTEXT_BUCKET}/${BUILD_CONTEXT}" --destination="${GCR_IMAGE}" --build-arg JAR_FILE="${APP_JAR}"
+                    /kaniko/executor -f ${env.workspace}/Dockerfile -c `pwd` --context="gs://${BUILD_CONTEXT_BUCKET}/${BUILD_CONTEXT}" --destination="${GCR_IMAGE}" --build-arg JAR_FILE="${APP_JAR}"
                     '''
                 }
             }
