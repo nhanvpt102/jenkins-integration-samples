@@ -13,20 +13,27 @@ spec:
       labels:
         app: jenkins-server
     spec:
+      tolerations:
+      - key: "kubernetes.azure.com/scalesetpriority"
+        operator: "Equal"
+        value: "spot"
+        effect: "NoSchedule"
       securityContext:
             fsGroup: 1000 
             runAsUser: 1000
       serviceAccountName: jenkins-admin
+      imagePullSecrets:
+      - name: svc-devops-stg
       containers:
         - name: jenkins
-          image: jenkins/jenkins:lts
+          image: gcr.io/eternal-empire-349717/jenkins:jcasc
           resources:
             limits:
               memory: "2Gi"
-              cpu: "1000m"
+              cpu: "800m"
             requests:
               memory: "500Mi"
-              cpu: "500m"
+              cpu: "100m"
           ports:
             - name: httpport
               containerPort: 8080
