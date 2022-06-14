@@ -27,6 +27,7 @@ spec:
       containers:
         - name: jenkins
           image: gcr.io/eternal-empire-349717/jenkins:jcasc
+          imagePullPolicy: Always
           resources:
             limits:
               memory: "2Gi"

@@ -400,7 +400,7 @@ function create_cert_secret(){
 #create_sa_deployer $SA_DEVOPS_NAME
 #config_sa_roles $SA_DEVOPS_NAME
 #config_sa_bucket_permissions $SA_DEVOPS_NAME
-#create_sa_kubernetes_secret $SA_DEVOPS_NAME $SA_DEVOPS_SECRET_FILE
+create_sa_kubernetes_secret $SA_DEVOPS_NAME $SA_DEVOPS_SECRET_FILE
 #create_firewall
 #port_forward
 #gke_cluster_config_services frontend
@@ -424,4 +424,4 @@ function create_cert_secret(){
 
 # create_cert "ninjamart-fe" "${DOMAIN_NAME}"
 # create_cert_secret "ninjamart-fe" "uat"
-check_ingress "34.102.149.137" 
+# check_ingress "34.102.149.137" 
